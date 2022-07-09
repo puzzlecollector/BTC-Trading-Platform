@@ -490,12 +490,12 @@ class CBITS_v3:
 
 if __name__ == '__main__':
     bybit_cred = {
-        "api_key": "wQEux6LxRKuEFx6U3M",
-        "api_secret": "NrIWVue3JH4L2c0rwowRCVPJaQ59LcQIY03y",
+        "api_key": "<YOUR BYBIT API KEY>",
+        "api_secret": "<YOUR BYBIT SECRET KEY>",
     }
     telegram_cred = {
-        "token": "5322673870:AAHO3hju4JRjzltkG5ywAwhjaPS2_7HFP0g",
-        "chat_id": 1720119057,
+        "token": "<YOUR TELEGRAM TOKEN>",
+        "chat_id": <YOUR TELEGRAM CHAT ID>,
     }
     trader = CBITS_v3(
         symbol="BTCUSDT",
