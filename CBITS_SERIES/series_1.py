@@ -17,7 +17,7 @@ from dateutil import parser
 from pybit import HTTP
 import pprint
 
-class CBITS_S1:
+class CBITS_PERFORMANTE:
     STOP_LOSS_PERCENT = 1.5
     def __init__(self, symbol, bybit_credential, telegram_credential, model_chkpt):
         self.exchange: BybitExchange = ccxt.bybit({
@@ -43,4 +43,24 @@ class CBITS_S1:
                             api_secret = bybit_credential["api_secret"],
                             spot = False)
 
-    
+    def get_df(self):
+        df = pd.DataFrame(self.exchange.fetch_ohlcv(self.symbol, timeframe="4h", limit=200))
+        df = df.rename(columns={0: "timestamp",
+                                1: "open",
+                                2: "high",
+                                3: "low",
+                                4: "close",
+                                5: "volume"})
+        return df
+
+    def create_timestamps(self, df):
+        dates = df["timestamp"].values
+        timestamp = []
+        for i in range(len(dates)):
+            date_string = self.exchange.iso8601(int(dates[i]))
+            date_string = date_string[:10] + " " + date_string[11:-5]
+            timestamp.append(date_string)
+        df["datetime"] = timestamp
+        df = df.drop(columns={"timestamp"})
+        df.set_index(pd.DatetimeIndex(df["datetime"]), inplace=True)
+        return df
