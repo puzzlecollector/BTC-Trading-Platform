@@ -117,7 +117,7 @@ for j in range(len(chart_minutes)):
     chart_df_datetime_objects.append(chart_date_obj) 
 
 all_titles, all_contents = [], [] 
-for j in tqdm(range(len(chart_df_datetime_objects[:100]))): 
+for j in tqdm(range(len(chart_df_datetime_objects))): 
     start_dt = chart_df_datetime_objects[j] 
     end_dt = start_dt + timedelta(hours=4) 
     cur_titles, cur_contents = [], [] 
@@ -171,4 +171,6 @@ for i in tqdm(range(len(all_titles))):
 all_embeddings = torch.stack(all_embeddings, dim=0) 
 print(all_embeddings.shape) 
 
+print("saving extracted embeddings...") 
 torch.save(all_embeddings, "all_news_embeddings.pt") 
+print("done saving!") 
