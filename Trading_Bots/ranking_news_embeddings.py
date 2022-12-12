@@ -5,17 +5,28 @@ import os
 from tqdm.auto import tqdm 
 import time 
 import datetime
+from torch.utils.data import *
 from transformers import * 
 import torch 
 import torch.nn as nn 
 import torch.nn.functional as F
-from scipy.spatial.distance import cdist 
+from scipy.spatial.distance import cdist  
+import logging 
+import re 
+
+def set_global_logging_level(level=logging.ERROR, prefices=[""]): 
+    prefix_re = re.compile(fr'^(?:{ "|".join(prefices) })') 
+    for name in logging.root.manager.loggerDict: 
+        if re.match(prefix_re, name): 
+            logging.getLogger(name).setLevel(level) 
+
+set_global_logging_level(logging.ERROR, ["transformers", "nlp", "torch", "tensorflow", "tensorboard", "wandb"]) 
 
 df = pd.read_csv("full_news_october_1st.csv")
 print("shape = {}".format(df.shape)) 
 
 model = AutoModel.from_pretrained("totoro4007/cryptodeberta-base-all-finetuned") 
-tokenizer = AutoTokenizer.from_pretrained("totoro4007/cryptodeberta-base-all-finetuned") 
+tokenizer = AlbertTokenizer.from_pretrained("totoro4007/cryptodeberta-base-all-finetuned") 
 
 titles = df["titles"].values 
 contents = df["contents"].values 
@@ -49,18 +60,23 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(f"currently using {device} for computation") 
 
-for i in tqdm(range(len(input_ids)), position=0, leave=True, desc="calculating embeddings"): 
-    with torch.no_grad(): 
-        input_id = input_ids[i] 
-        input_id = torch.reshape(input_id, (-1, 512)) 
-        input_id = input_id.to(device) 
-        attention_mask = attention_masks[i] 
-        attention_mask = torch.reshape(attention_mask, (-1, 512))  
-        attention_mask = attention_mask.to(device) 
-        embedding = model(input_id, attention_mask)[0][:,0,:] 
-        candidate_embeddings.append(embedding) 
-        
-candidate_embeddings = torch.cat(candidate_embeddings, dim=0) 
+batch_size = 32 
+data = TensorDataset(input_ids, attention_masks) 
+sampler = SequentialSampler(data) 
+dataloader = DataLoader(data, sampler=sampler, batch_size=batch_size) 
+
+for step, batch in tqdm(enumerate(dataloader), desc="calculating embeddings", position=0, leave=True, total=len(dataloader)): 
+    batch = tuple(t.to(device) for t in batch) 
+    b_input_ids, b_attn_masks = batch 
+    with torch.no_grad():
+        output = model(b_input_ids, b_attn_masks)[0][:,0,:]
+        output = output.detach().cpu() 
+        for i in range(output.shape[0]): 
+            candidate_embeddings.append(torch.reshape(output[i], (-1, 768))) 
+
+candidate_embeddings = torch.cat(candidate_embeddings, dim=0)  
+
+print(candidate_embeddings.shape) 
 
 print("saving news candidates...") 
 torch.save(candidate_embeddings, "news_candidate_embeddings.pt") 
