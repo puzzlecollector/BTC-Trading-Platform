@@ -160,14 +160,16 @@ for i in tqdm(range(len(datetimes_dt)), position=0, leave=True):
         
 chart_df = chart_df.drop(columns={"datetime"}) 
 
+print(chart_df) 
+
 seq_len = 1
 
 X_chart, X_news = [], []  
 Y = [] 
 
 for i in tqdm(range(chart_df.shape[0] - seq_len), position=0, leave=True): 
-    cur_seq = chart_df.iloc[i:i+seq_len, 1:].values  
-    cur_target = chart_df.iloc[i+seq_len-1, 0] 
+    cur_seq = chart_df.iloc[i:i+seq_len, :-1].values  
+    cur_target = chart_df.iloc[i+seq_len-1, -1] 
     X_chart.append(cur_seq) 
     Y.append(cur_target) 
     
@@ -376,7 +378,7 @@ for epoch_i in tqdm(range(0, epochs), desc="Epochs", position=0, leave=True, tot
     with tqdm(train_dataloader, unit="batch") as tepoch: 
         for step, batch in enumerate(tepoch): 
             batch = tuple(t.to(device) for t in batch) 
-            b_chart, b_input_ids, b_attn_masks, b_labels = batch 
+            b_chart, b_input_ids, b_attn_masks, b_labels = batch
             outputs = model(b_chart, b_input_ids, b_attn_masks) 
             # get loss 
             loss = loss_func(outputs, b_labels) 
