@@ -223,7 +223,7 @@ class CBITS_Ensemble:
     
     def place_best_sell_market_order(self, qty, reduce_only, stop_loss, take_profit): 
         resp = self.session.place_active_order(
-            symbol=self.sybmol_id, 
+            symbol=self.symbol_id, 
             side="Sell", 
             order_type="Market", 
             qty=qty, 
@@ -258,7 +258,7 @@ class CBITS_Ensemble:
         self.roberta.eval()
         MAX_LOOKBACK = 300
         while True:
-            print("==== Trade Iteration {str(iteration)} ====")
+            print(f"==== Trade Iteration {iteration} ====")
             t0 = time.time()
             df = self.get_df()
             df = self.create_timestamps(df)
@@ -347,30 +347,29 @@ class CBITS_Ensemble:
             action = np.argmax(prob_avg)
             pos_dict = {0:"Long", 1:"Short", 2:"Hold"}
             print("CBITS directional prediction {}, probability {:.3f}".format(pos_dict[action], prob_avg[0][action]))
-            print("Current BTC news sentiment score (positive, negative): {}".format(sentiment_scores)) 
-        
+            print("Current BTC news sentiment score (positive, negative): {}".format(sentiment_scores))  
+
             if action == 0:
                 qty = self.get_position_size()
                 if qty == 0:
                     print("currently no positions opened, so we do not need to close any") 
                 else:
                     if move == -1:
-                        #self.place_best_buy_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                         self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                     elif move == 1:
-                        #self.place_best_sell_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                         self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                 max_bid, min_ask = self.get_best_bid_ask()
                 cur_price = (max_bid + min_ask) / 2.0
                 balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
                 usdt = balances["result"]["list"][0]["availableBalance"] 
                 print("current cash status = " + str(usdt))
-                cur_qty = float(usdt) / float(cur_price) * leverage
-                cur_qty = self.my_floor(cur_qty, precision=5)
+                cur_qty = float(usdt) / float(cur_price) * leverage 
+                print(cur_qty) 
+                cur_qty = self.my_floor(cur_qty, precision=5)  
+                print(cur_qty) 
                 stop_loss = float(cur_price) * (1 - self.STOP_LOSS_PERCENT / 100)
                 stop_loss = round(stop_loss) 
                 for trial in range(10): 
-                    print(f"Trial {trial}") 
                     try: 
                         self.place_best_buy_limit_order(qty=cur_qty, reduce_only=False, stop_loss=stop_loss, take_profit=None)
                     except Exception as e: 
@@ -378,7 +377,7 @@ class CBITS_Ensemble:
                         continue 
                     else:
                         break 
-                    time.sleep(3.0) 
+                    time.sleep(10) 
                 move = 1
             elif action == 1:
                 qty = self.get_position_size()
@@ -386,22 +385,20 @@ class CBITS_Ensemble:
                     print("currently no positions opened, so we do not need to close any")
                 else:
                     if move == -1:
-                        #self.place_best_buy_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                         self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                     elif move == 1:
-                        #self.place_best_sell_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                         self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                 max_bid, min_ask = self.get_best_bid_ask()
                 cur_price = (max_bid + min_ask) / 2.0
                 balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
                 usdt = balances["result"]["list"][0]["availableBalance"] 
+                print("current cash status = " + str(usdt)) 
                 asyncio.run(self.send_message("current cash status = " + str(usdt)))
                 cur_qty = float(usdt) / float(cur_price) * leverage
                 cur_qty = self.my_floor(cur_qty, precision=5)
                 stop_loss = float(cur_price) * (1 + self.STOP_LOSS_PERCENT / 100)
                 stop_loss = round(stop_loss)
                 for trial in range(10): 
-                    print(f"Trial {trial}")  
                     try: 
                         self.place_best_sell_limit_order(qty=cur_qty, reduce_only=False, stop_loss=stop_loss, take_profit=None) 
                     except Exception as e: 
@@ -409,7 +406,7 @@ class CBITS_Ensemble:
                         continue 
                     else:
                         break 
-                    time.sleep(3.0) 
+                    time.sleep(10)  
                 move = -1
             else:
                qty = self.get_position_size()
@@ -417,17 +414,21 @@ class CBITS_Ensemble:
                    print("curently no positions opened, so we do not need to close any")
                else:
                    if move == -1:
-                        self.place_best_buy_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
+                        self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                    elif move == 1:
-                        self.place_best_sell_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
+                        self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                max_bid, min_ask = self.get_best_bid_ask() 
                cur_price = (max_bid + min_ask) / 2.0 
                balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
                usdt = balances["result"]["list"][0]["availableBalance"] 
+               print("current cash status = " + usdt) 
             iteration += 1 
             print("waiting for the next 4 hours") 
             elapsed = time.time() - t0 
-            time.sleep(60*60*4 - elapsed) 
+            if iteration == 1: 
+                time.sleep(60*193 - elapsed) 
+            else: 
+                time.sleep(60*60*4 - elapsed) 
             
 
 
@@ -447,5 +448,4 @@ if __name__ == "__main__":
         dnn_chkpt = "DNN_chkpt.pt",
         xgb_chkpt = "CBITS_XGB"
     )
-    time.sleep(60*188) 
     trader.execute_trade()
