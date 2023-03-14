@@ -359,7 +359,7 @@ class CBITS_Ensemble:
                         self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                     elif move == 1:
                         #self.place_best_sell_limit_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
-                        self.place_best_sell_market_order(qty=qty, reudce_only=True, stop_loss=None, take_profit=None) 
+                        self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
                 max_bid, min_ask = self.get_best_bid_ask()
                 cur_price = (max_bid + min_ask) / 2.0
                 balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
