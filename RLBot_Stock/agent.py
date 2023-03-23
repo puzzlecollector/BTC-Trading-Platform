@@ -118,3 +118,46 @@ class Agent:
 
         # 환경에서 현재 가격 얻기
         curr_price = self.environment.get_price()
+        # 매수
+        if action == Agent.ACTION_BUY:
+            # 매수할 단위를 판단
+            trading_unit = self.decide_trading_unit(confidence)
+            balance = (
+                self.balance - curr_price * (1 + self.TRADING_CHARGE) * trading_unit
+            )
+            # 보유 현금이 모자랄 경우 보유 현금으로 가능한 만큼 최대한 매수
+            if balance < 0:
+                trading_unit = min(
+                    int(self.balance / (curr_price * (1 + self.TRADING_CHARGE))),
+                    int(self.max_trading_price / curr_price)
+                )
+            # 수수료를 적용하여 총 매수 금액 산정
+            invest_amount = curr_price * (1 + self.TRADING_CHARGE) * trading_unit
+            if invest_amount > 0:
+                self.avg_buy_price = (self.avg_buy_price * self.num_stocks + curr_price * trading_unit) / (self.num_stocks + trading_unit)
+                self.balance -= invest_amount # 보유 현금을 갱신
+                self.num_stocks += trading_unit # 보유 주식 수를 갱신
+                self.num_buy += 1
+        # 매도
+        elif action == Agent.ACTION_SELL:
+            # 매도할 단위를 판단
+            trading_unit = self.decide_trading_unit(confidence)
+            # 보유 주식이 모자랄 경우 가능한 만큼 최대한 매도
+            trading_unit = min(trading_unit, self.num_stocks)
+            # 매도
+            invest_amount = curr_price * (1 - (self.TRADING_TAX + self.TRADING_CHARGE)) * trading_unit
+            if invest_amount > 0:
+                # 주당 매수 단가 갱신
+                self.avg_buy_price = (self.avg_buy_price * self.num_stocks - curr_price) / (self.num_stocks - trading_unit) if self.num_stocks > trading_unit else 0
+                self.num_stocks -= trading_unit
+                self.balance += invest_amount
+                self.num_sell += 1
+
+        # 관망
+        elif action == Agent.ACTION_HOLD:
+            self.num_hold += 1
+
+        # PV update
+        self.portfolio_value = self.balance + curr_price * self.num_stocks
+        self.protifloss = self.portfolio_value / self.initial_balance - 1
+        return self.profitloss  
