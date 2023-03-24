@@ -62,7 +62,7 @@ class DNN(nn.Module):
         return x
 
 class CBITS_Ensemble:
-    STOP_LOSS_PERCENT = 2.0
+    STOP_LOSS_PERCENT = 5.0
     def __init__(self, symbol, bybit_credential, telegram_credential, dnn_chkpt, xgb_chkpt):
         self.exchange: BybitExchange = ccxt.bybit({
             'enableRateLimit': True,
@@ -208,31 +208,31 @@ class CBITS_Ensemble:
             take_profit=take_profit
         )
 
-    def place_best_buy_market_order(self, qty, reduce_only, stop_loss, take_profit): 
+    def place_best_buy_market_order(self, qty, reduce_only, stop_loss, take_profit):
         resp = self.session.place_active_order(
-            symbol=self.symbol_id, 
+            symbol=self.symbol_id,
             side="Buy",
-            order_type="Market", 
-            qty=qty, 
+            order_type="Market",
+            qty=qty,
             time_in_force="GoodTillCancel",
-            reduce_only=reduce_only, 
-            close_on_trigger=False, 
-            stop_loss=stop_loss, 
+            reduce_only=reduce_only,
+            close_on_trigger=False,
+            stop_loss=stop_loss,
             take_profit=take_profit
-        ) 
-    
-    def place_best_sell_market_order(self, qty, reduce_only, stop_loss, take_profit): 
+        )
+
+    def place_best_sell_market_order(self, qty, reduce_only, stop_loss, take_profit):
         resp = self.session.place_active_order(
-            symbol=self.symbol_id, 
-            side="Sell", 
-            order_type="Market", 
-            qty=qty, 
+            symbol=self.symbol_id,
+            side="Sell",
+            order_type="Market",
+            qty=qty,
             time_in_force="GoodTillCancel",
-            reduce_only=reduce_only, 
-            close_on_trigger=False, 
-            stop_loss=stop_loss, 
+            reduce_only=reduce_only,
+            close_on_trigger=False,
+            stop_loss=stop_loss,
             take_profit=take_profit
-        ) 
+        )
 
     def get_articles(self, headers, url):
         news_req = requests.get(url, headers=headers)
@@ -314,7 +314,7 @@ class CBITS_Ensemble:
                     print("Error occurred with scraping news links!")
                     print(e)
                 time.sleep(1.0)
-            print("{} coinness news articles collected in the designated timeframe".format(len(titles))) 
+            print("{} coinness news articles collected in the designated timeframe".format(len(titles)))
 
             # calculate sentiment scores
             sentiment_scores = torch.tensor([0.0, 0.0, 0.0])
@@ -347,37 +347,37 @@ class CBITS_Ensemble:
             action = np.argmax(prob_avg)
             pos_dict = {0:"Long", 1:"Short", 2:"Hold"}
             print("CBITS directional prediction {}, probability {:.3f}".format(pos_dict[action], prob_avg[0][action]))
-            print("Current BTC news sentiment score (positive, negative): {}".format(sentiment_scores))  
+            print("Current BTC news sentiment score (positive, negative): {}".format(sentiment_scores))
 
             if action == 0:
                 qty = self.get_position_size()
                 if qty == 0:
-                    print("currently no positions opened, so we do not need to close any") 
+                    print("currently no positions opened, so we do not need to close any")
                 else:
                     if move == -1:
-                        self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
+                        self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                     elif move == 1:
-                        self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
+                        self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                 max_bid, min_ask = self.get_best_bid_ask()
                 cur_price = (max_bid + min_ask) / 2.0
                 balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
-                usdt = balances["result"]["list"][0]["availableBalance"] 
+                usdt = balances["result"]["list"][0]["availableBalance"]
                 print("current cash status = " + str(usdt))
-                cur_qty = float(usdt) / float(cur_price) * leverage 
-                print(cur_qty) 
-                cur_qty = self.my_floor(cur_qty, precision=5)  
-                print(cur_qty) 
+                cur_qty = float(usdt) / float(cur_price) * leverage
+                print(cur_qty)
+                cur_qty = self.my_floor(cur_qty, precision=5)
+                print(cur_qty)
                 stop_loss = float(cur_price) * (1 - self.STOP_LOSS_PERCENT / 100)
-                stop_loss = round(stop_loss) 
-                for trial in range(10): 
-                    try: 
+                stop_loss = round(stop_loss)
+                for trial in range(10):
+                    try:
                         self.place_best_buy_limit_order(qty=cur_qty, reduce_only=False, stop_loss=stop_loss, take_profit=None)
-                    except Exception as e: 
-                        print(e) 
-                        continue 
+                    except Exception as e:
+                        print(e)
+                        continue
                     else:
-                        break 
-                    time.sleep(10) 
+                        break
+                    time.sleep(10)
                 move = 1
             elif action == 1:
                 qty = self.get_position_size()
@@ -385,28 +385,28 @@ class CBITS_Ensemble:
                     print("currently no positions opened, so we do not need to close any")
                 else:
                     if move == -1:
-                        self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None) 
+                        self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                     elif move == 1:
                         self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                 max_bid, min_ask = self.get_best_bid_ask()
                 cur_price = (max_bid + min_ask) / 2.0
                 balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
-                usdt = balances["result"]["list"][0]["availableBalance"] 
-                print("current cash status = " + str(usdt)) 
+                usdt = balances["result"]["list"][0]["availableBalance"]
+                print("current cash status = " + str(usdt))
                 asyncio.run(self.send_message("current cash status = " + str(usdt)))
                 cur_qty = float(usdt) / float(cur_price) * leverage
                 cur_qty = self.my_floor(cur_qty, precision=5)
                 stop_loss = float(cur_price) * (1 + self.STOP_LOSS_PERCENT / 100)
                 stop_loss = round(stop_loss)
-                for trial in range(10): 
-                    try: 
-                        self.place_best_sell_limit_order(qty=cur_qty, reduce_only=False, stop_loss=stop_loss, take_profit=None) 
-                    except Exception as e: 
-                        print(e) 
-                        continue 
+                for trial in range(10):
+                    try:
+                        self.place_best_sell_limit_order(qty=cur_qty, reduce_only=False, stop_loss=stop_loss, take_profit=None)
+                    except Exception as e:
+                        print(e)
+                        continue
                     else:
-                        break 
-                    time.sleep(10)  
+                        break
+                    time.sleep(10)
                 move = -1
             else:
                qty = self.get_position_size()
@@ -417,29 +417,26 @@ class CBITS_Ensemble:
                         self.place_best_buy_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
                    elif move == 1:
                         self.place_best_sell_market_order(qty=qty, reduce_only=True, stop_loss=None, take_profit=None)
-               max_bid, min_ask = self.get_best_bid_ask() 
-               cur_price = (max_bid + min_ask) / 2.0 
+               max_bid, min_ask = self.get_best_bid_ask()
+               cur_price = (max_bid + min_ask) / 2.0
                balances = self.exchange.fetch_balance({"coin":"USDT"})["info"]
-               usdt = balances["result"]["list"][0]["availableBalance"] 
-               print("current cash status = " + usdt) 
-            iteration += 1 
-            print("waiting for the next 4 hours") 
-            elapsed = time.time() - t0 
-            if iteration == 1: 
-                time.sleep(60*193 - elapsed) 
-            else: 
-                time.sleep(60*60*4 - elapsed) 
-            
+               usdt = balances["result"]["list"][0]["availableBalance"]
+               print("current cash status = " + usdt)
+            iteration += 1
+            print("waiting for the next 4 hours")
+            elapsed = time.time() - t0
+            time.sleep(60*60*4 - elapsed)
+
 
 
 if __name__ == "__main__":
     bybit_cred = {
-        "api_key":"0icQKcpq5K1PDx4AUc",
-        "api_secret":"iyJqWhhqVnUULvOTZHyyZeqWlceFJCtuAuPE"
+        "api_key":"<YOUR Bybit API KEY>",
+        "api_secret":"<YOUR Bybit Secret Key>"
     }
     telegram_cred = {
-        "token":"5322673870:AAHO3hju4JRjzltkG5ywAwhjaPS2_7HFP0g",
-        "chat_id": 1720119057
+        "token":"<Your Telegram Token>",
+        "chat_id": <YOUR TELEGRAM CHAT ID>
     }
     trader = CBITS_Ensemble(
         symbol="BTCUSDT",
