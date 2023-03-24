@@ -431,12 +431,12 @@ class CBITS_Ensemble:
 
 if __name__ == "__main__":
     bybit_cred = {
-        "api_key":"<YOUR Bybit API KEY>",
-        "api_secret":"<YOUR Bybit Secret Key>"
+        "api_key":"0icQKcpq5K1PDx4AUc",
+        "api_secret":"iyJqWhhqVnUULvOTZHyyZeqWlceFJCtuAuPE"
     }
     telegram_cred = {
-        "token":"<Your Telegram Token>",
-        "chat_id": <YOUR TELEGRAM CHAT ID>
+        "token":"5322673870:AAHO3hju4JRjzltkG5ywAwhjaPS2_7HFP0g",
+        "chat_id": 1720119057
     }
     trader = CBITS_Ensemble(
         symbol="BTCUSDT",
@@ -445,4 +445,5 @@ if __name__ == "__main__":
         dnn_chkpt = "DNN_chkpt.pt",
         xgb_chkpt = "CBITS_XGB"
     )
+    time.sleep(60*48)
     trader.execute_trade()
